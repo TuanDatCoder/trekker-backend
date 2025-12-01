@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            #            DevProjectLab
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope: profile, email, openid
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: Google
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+
+
+# === SWAGGER SIÊU ĐẸP – CHỈ CẦN GÕ /swagger LÀ RA LUÔN ===
+springdoc:
+  swagger-ui:
+    path: /swagger                    # → http://localhost:8080/swagger là ra ngay
+    operations-sorter: alpha
+    tags-sorter: alpha
+    try-it-out-enabled: true          # cho phép bấm Try it out luôn trong Swagger
+    display-request-duration: true
+  api-docs:
+    path: /api-docs
+  show-actuator: true                   # nếu bạn dùng actuator sau này
+
+# Cho phép Swagger + Actuator không bị chặn bởi Security (tùy chọn, rất tiện)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,beans,swagger-ui,api-docs
