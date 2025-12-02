@@ -21,7 +21,7 @@ public class Account {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id; // Dùng Integer theo yêu cầu
+    private Long id;
 
     @Column(unique = true, nullable = false, length = 50)
     private String username;
@@ -70,7 +70,7 @@ public class Account {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private AccountStatusEnum status = AccountStatusEnum.ACTIVE;
+    private AccountStatusEnum status = AccountStatusEnum.UNVERIFIED;
 
     @CreationTimestamp
     @Column(name = "create_at", updatable = false)

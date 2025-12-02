@@ -1,4 +1,4 @@
-package com.tuandatcoder.trekkerbackend.auth;
+package com.tuandatcoder.trekkerbackend.dto.auth.request;
 
 import com.tuandatcoder.trekkerbackend.enums.AccountRoleEnum;
 import lombok.AllArgsConstructor;
