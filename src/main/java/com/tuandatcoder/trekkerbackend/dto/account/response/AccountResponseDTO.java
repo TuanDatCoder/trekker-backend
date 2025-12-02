@@ -22,19 +22,10 @@ public class AccountResponseDTO {
     private String email;
 
     private String name;
+
     private String picture;
 
     private AccountRoleEnum role;
 
     private AccountStatusEnum status;
-
-    private AccountProviderEnum provider;
-
-    private LocalDateTime createAt;
-
-    private LocalDateTime updatedAt;
-
-    private String dateOfBirth;
-
-    private String gender;
 }

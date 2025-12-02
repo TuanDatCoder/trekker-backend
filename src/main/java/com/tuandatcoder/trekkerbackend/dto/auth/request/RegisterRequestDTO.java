@@ -1,6 +1,6 @@
 package com.tuandatcoder.trekkerbackend.dto.auth.request;
 
-import com.tuandatcoder.trekkerbackend.enums.GenderEnum;
+import com.tuandatcoder.trekkerbackend.enums.AccountGenderEnum;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -31,7 +31,7 @@ public class RegisterRequestDTO {
     @Size(max = 100, message = "Full name must not exceed 100 characters")
     private String name;
 
-    private GenderEnum gender;
+    private AccountGenderEnum gender;
 
     private LocalDate dateOfBirth;
 }

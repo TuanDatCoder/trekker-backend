@@ -1,5 +1,5 @@
 package com.tuandatcoder.trekkerbackend.enums;
 
-public enum GenderEnum {
+public enum AccountGenderEnum {
     MALE, FEMALE, OTHER
 }

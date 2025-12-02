@@ -3,6 +3,7 @@ package com.tuandatcoder.trekkerbackend.controller;
 import com.tuandatcoder.trekkerbackend.dto.ApiResponse;
 import com.tuandatcoder.trekkerbackend.dto.auth.request.LoginRequestDTO;
 import com.tuandatcoder.trekkerbackend.dto.auth.request.RegisterRequestDTO;
+import com.tuandatcoder.trekkerbackend.dto.auth.response.LoginResponseDTO;
 import com.tuandatcoder.trekkerbackend.entity.Account;
 import com.tuandatcoder.trekkerbackend.enums.AccountStatusEnum;
 import com.tuandatcoder.trekkerbackend.security.JwtTokenUtil;
@@ -62,8 +63,8 @@ public class AuthController {
 
     // LOGIN
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> login(@RequestBody LoginRequestDTO loginRequest) {
-        ApiResponse<Map<String, Object>> response = accountService.login(loginRequest);
+    public ResponseEntity<ApiResponse<LoginResponseDTO>> login(@RequestBody LoginRequestDTO loginRequest) {
+        ApiResponse<LoginResponseDTO> response = accountService.login(loginRequest);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
