@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -46,6 +47,7 @@ public class AuthController {
                 201,
                 "Registration successful. Please check your email to verify your account.",
                 null
+
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
