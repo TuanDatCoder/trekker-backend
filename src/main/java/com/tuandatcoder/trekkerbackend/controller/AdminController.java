@@ -1,6 +1,7 @@
 package com.tuandatcoder.trekkerbackend.controller;
 
 
+import com.tuandatcoder.trekkerbackend.dto.ApiResponse;
 import com.tuandatcoder.trekkerbackend.dto.account.response.AccountResponseDTO;
 import com.tuandatcoder.trekkerbackend.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +23,8 @@ public class AdminController {
 
     @GetMapping("/accounts")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AccountResponseDTO>> getAllAccounts() {
-        List<AccountResponseDTO> accounts = accountService.getAllAccounts();
-        return new ResponseEntity<>(accounts, HttpStatus.OK);
+    public ResponseEntity<ApiResponse<List<AccountResponseDTO>>> getAllAccounts() {
+        ApiResponse<List<AccountResponseDTO>> response = accountService.getAllAccounts();
+        return ResponseEntity.status(response.getCode()).body(response);
     }
 }

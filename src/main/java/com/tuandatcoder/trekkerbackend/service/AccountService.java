@@ -1,6 +1,7 @@
 package com.tuandatcoder.trekkerbackend.service;
 
 
+import com.tuandatcoder.trekkerbackend.dto.ApiResponse;
 import com.tuandatcoder.trekkerbackend.dto.account.response.AccountResponseDTO;
 import com.tuandatcoder.trekkerbackend.dto.auth.request.LoginRequestDTO;
 import com.tuandatcoder.trekkerbackend.dto.auth.request.RegisterRequestDTO;
@@ -74,26 +75,26 @@ public class AccountService {
             String email = jwtTokenUtil.getUsernameFromToken(token);
             verifyAccountByEmail(email);
         } catch (Exception e) {
-            throw new AccountException("Invalid token", ErrorCode.TOKEN_INVALID);
+            throw new AccountException("Invalid or expired token", ErrorCode.TOKEN_INVALID);
         }
     }
 
     public void verifyAccountByEmail(String email) {
-        Optional<Account> optionalAccount = accountRepository.findByEmail(email);
-        if (optionalAccount.isPresent()) {
-            Account account = optionalAccount.get();
-            account.setStatus(AccountStatusEnum.VERIFIED);
-            accountRepository.save(account);
-        } else {
-            throw new AccountException("Account not found", ErrorCode.ACCOUNT_NOT_FOUND);
+        Account account = accountRepository.findByEmail(email)
+                .orElseThrow(() -> new AccountException("Account not found", ErrorCode.ACCOUNT_NOT_FOUND));
+
+        if (account.getStatus() == AccountStatusEnum.VERIFIED) {
+            return; // đã verify rồi thì thôi
         }
+
+        account.setStatus(AccountStatusEnum.VERIFIED);
+        accountRepository.save(account);
     }
 
-    public Map<String, Object> login(LoginRequestDTO loginRequest) {
-        Map<String, Object> response = new HashMap<>();
+    // TRẢ VỀ ApiResponse<Map<String, Object>>
+    public ApiResponse<Map<String, Object>> login(LoginRequestDTO loginRequest) {
         String identifier = loginRequest.getIdentifier();
 
-        // TÌM THEO EMAIL HOẶC USERNAME — CHỈ 1 DÒNG THẦN THÁNH
         Account account = accountRepository.findByEmail(identifier)
                 .or(() -> accountRepository.findByUsername(identifier))
                 .orElseThrow(() -> new AccountException(
@@ -101,14 +102,14 @@ public class AccountService {
                         ErrorCode.USER_NOT_FOUND
                 ));
 
-        // Kiểm tra provider (Google, Facebook...)
+        // Kiểm tra provider
         if (account.getProvider() != AccountProviderEnum.LOCAL) {
-            response.put("message", "Please log in using " + account.getProvider());
-            return response;
+            return new ApiResponse<>(400, "Please log in using " + account.getProvider(), null);
         }
 
+        // Kiểm tra đã verify chưa
         if (account.getStatus() != AccountStatusEnum.VERIFIED) {
-            throw new AccountException("Please verify your email first", ErrorCode.ACCOUNT_NOT_VERIFY);
+            return new ApiResponse<>(403, "Please verify your email first", null);
         }
 
         try {
@@ -119,36 +120,47 @@ public class AccountService {
             UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(identifier);
             String token = jwtTokenUtil.generateToken(userDetails);
 
-            response.put("token", token);
-            response.put("message", "Login successful");
-            response.put("userId", account.getId());
-            response.put("username", account.getUsername());
-            response.put("email", account.getEmail());
+            Map<String, Object> data = new HashMap<>();
+            data.put("token", token);
+            data.put("userId", account.getId());
+            data.put("username", account.getUsername());
+            data.put("email", account.getEmail());
+            data.put("name", account.getName());
+
+            return new ApiResponse<>(200, "Login successful", data);
 
         } catch (BadCredentialsException e) {
-            throw new AccountException("Invalid password", ErrorCode.USERNAME_PASSWORD_NOT_CORRECT);
+            return new ApiResponse<>(401, "Invalid password", null);
+        } catch (Exception e) {
+            return new ApiResponse<>(500, "Login failed: " + e.getMessage(), null);
         }
-
-        return response;
     }
 
-    public Optional<Account> findByEmail(String email) {
-        return accountRepository.findByEmail(email);
-    }
 
-    public List<AccountResponseDTO> getAllAccounts() {
-        List<Account> accounts = accountRepository.findAll();
-        return accounts.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+    public ApiResponse<List<AccountResponseDTO>> getAllAccounts() {
+        try {
+            List<Account> accounts = accountRepository.findAll();
+            List<AccountResponseDTO> dtos = accounts.stream()
+                    .map(this::convertToDto)  // ← QUAN TRỌNG: Chỉ expose field cần thiết
+                    .collect(Collectors.toList());
+
+            return new ApiResponse<>(200, "Lấy danh sách tài khoản thành công", dtos);
+        } catch (Exception e) {
+            return new ApiResponse<>(500, "Lỗi khi lấy tài khoản: " + e.getMessage(), null);
+        }
     }
 
     private AccountResponseDTO convertToDto(Account account) {
+        // CHỈ expose những field cần thiết cho frontend
         AccountResponseDTO dto = new AccountResponseDTO();
         dto.setId(account.getId());
-        dto.setUsername(account.getName());
+        dto.setUsername(account.getUsername()); // ← ĐÚNG! username, không phải name
         dto.setEmail(account.getEmail());
-        // Chuyển đổi các trường khác nếu cần
+        dto.setName(account.getName());
+        dto.setRole(account.getRole());
+        dto.setStatus(account.getStatus());
+        // KHÔNG set password, createdAt, updatedAt...
+
         return dto;
     }
 }
