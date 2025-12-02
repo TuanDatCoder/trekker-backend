@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("api/auth")
 public class AuthController {
 
     @Autowired
@@ -41,17 +41,15 @@ public class AuthController {
         Account newAccount = accountService.registerNewAccount(registerRequest);
         if (newAccount.getStatus() == AccountStatusEnum.UNVERIFIED) {
             String verificationToken = jwtTokenUtil.generateToken(new org.springframework.security.core.userdetails.User(newAccount.getEmail(), "", new ArrayList<>()));
-            String verificationLink = "http://localhost:8080/auth/verify/" + verificationToken;
+            String verificationLink = "http://localhost:8080/api/auth/verify/" + verificationToken;
             emailService.sendVerificationEmail(newAccount.getEmail(), newAccount.getName(), verificationLink);
         }
-        return new ResponseEntity<>("Đăng ký thành công, vui lòng kiểm tra email để xác thực tài khoản.", HttpStatus.CREATED);
-    }
+        return new ResponseEntity<>("Registration successful. Please check your email to verify your account.", HttpStatus.CREATED);    }
 
     @GetMapping("/verify/{token}")
     public ResponseEntity<String> verifyAccount(@PathVariable String token) {
         accountService.verifyAccountByToken(token);
-        return new ResponseEntity<>("Xác thực tài khoản thành công.", HttpStatus.OK);
-    }
+        return new ResponseEntity<>("Account verified successfully.", HttpStatus.OK);    }
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequestDTO loginRequest) {

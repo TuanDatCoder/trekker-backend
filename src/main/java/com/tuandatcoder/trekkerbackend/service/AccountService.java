@@ -6,6 +6,7 @@ import com.tuandatcoder.trekkerbackend.dto.auth.request.LoginRequestDTO;
 import com.tuandatcoder.trekkerbackend.dto.auth.request.RegisterRequestDTO;
 import com.tuandatcoder.trekkerbackend.entity.Account;
 import com.tuandatcoder.trekkerbackend.enums.AccountProviderEnum;
+import com.tuandatcoder.trekkerbackend.enums.AccountRoleEnum;
 import com.tuandatcoder.trekkerbackend.enums.AccountStatusEnum;
 import com.tuandatcoder.trekkerbackend.exception.ErrorCode;
 import com.tuandatcoder.trekkerbackend.exception.account.AccountException;
@@ -48,15 +49,23 @@ public class AccountService {
         if (accountRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
             throw new AccountException("User existed", ErrorCode.USER_EXISTED);
         }
+        if (accountRepository.findByUsername(registerRequest.getUsername()).isPresent()) {
+            throw new AccountException("Username already taken", ErrorCode.USERNAME_TAKEN);
+        }
 
-        Account account = new Account();
-        account.setEmail(registerRequest.getEmail());
-        account.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        account.setName(registerRequest.getName());
-        account.setProvider(AccountProviderEnum.LOCAL);
-        account.setRole(registerRequest.getRole());
-        account.setStatus(AccountStatusEnum.UNVERIFIED);
-        account.setCreateAt(LocalDateTime.now());
+        Account account = Account.builder()
+                .email(registerRequest.getEmail())
+                .username(registerRequest.getUsername())
+                .password(passwordEncoder.encode(registerRequest.getPassword()))
+                .name(registerRequest.getName())
+                .gender(registerRequest.getGender())
+                .dateOfBirth(registerRequest.getDateOfBirth())
+                .provider(AccountProviderEnum.LOCAL)
+                .role(AccountRoleEnum.USER)
+                .status(AccountStatusEnum.UNVERIFIED)
+                .createAt(LocalDateTime.now())
+                .build();
+
         return accountRepository.save(account);
     }
 
@@ -82,26 +91,42 @@ public class AccountService {
 
     public Map<String, Object> login(LoginRequestDTO loginRequest) {
         Map<String, Object> response = new HashMap<>();
-        Account account = accountRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new AccountException("User not found with email: " + loginRequest.getEmail(), ErrorCode.USER_NOT_FOUND));
+        String identifier = loginRequest.getIdentifier();
 
+        // TÌM THEO EMAIL HOẶC USERNAME — CHỈ 1 DÒNG THẦN THÁNH
+        Account account = accountRepository.findByEmail(identifier)
+                .or(() -> accountRepository.findByUsername(identifier))
+                .orElseThrow(() -> new AccountException(
+                        "User not found with provided email or username",
+                        ErrorCode.USER_NOT_FOUND
+                ));
+
+        // Kiểm tra provider (Google, Facebook...)
         if (account.getProvider() != AccountProviderEnum.LOCAL) {
-            response.put("message", "Please log in using Google");
+            response.put("message", "Please log in using " + account.getProvider());
             return response;
+        }
+
+        if (account.getStatus() != AccountStatusEnum.VERIFIED) {
+            throw new AccountException("Please verify your email first", ErrorCode.ACCOUNT_NOT_VERIFY);
         }
 
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(identifier, loginRequest.getPassword())
             );
 
-            UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(loginRequest.getEmail());
+            UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(identifier);
             String token = jwtTokenUtil.generateToken(userDetails);
 
             response.put("token", token);
             response.put("message", "Login successful");
+            response.put("userId", account.getId());
+            response.put("username", account.getUsername());
+            response.put("email", account.getEmail());
+
         } catch (BadCredentialsException e) {
-            throw new AccountException("Invalid email or password", ErrorCode.USERNAME_PASSWORD_NOT_CORRECT);
+            throw new AccountException("Invalid password", ErrorCode.USERNAME_PASSWORD_NOT_CORRECT);
         }
 
         return response;

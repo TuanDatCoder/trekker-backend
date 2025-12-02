@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class HomeController {
-    @GetMapping("/home")
+    @GetMapping("api/home")
     public String home(@AuthenticationPrincipal OAuth2User principal) {
         if (principal == null) {
             return "User not authenticated";

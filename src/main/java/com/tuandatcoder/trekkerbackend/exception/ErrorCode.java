@@ -21,13 +21,13 @@ public enum ErrorCode {
     NOT_LOGIN(1011, "You need to login", HttpStatus.BAD_REQUEST),
     USERNAME_PASSWORD_NOT_CORRECT(1012, "Username or password is not correct", HttpStatus.BAD_REQUEST),
     ACCOUNT_NOT_FOUND(1013,"Account not found", HttpStatus.NOT_FOUND),
-    EMAIL_NOT_FOUND(1013,"Email not found, please register account.", HttpStatus.NOT_FOUND),
-
-    //    Accounts | Emails | CODE: 11XX
-    INVALID_EMAIL(1100, "Invalid email", HttpStatus.BAD_REQUEST),
-    EMAIL_WAIT_VERIFY(1101, "This email has been registered and is not verified, please verify and login", HttpStatus.BAD_REQUEST),
-    EMAIL_EXISTED(1102, "This email has been registered, please log in!", HttpStatus.BAD_REQUEST),
-    SUCCESS(200, "Success",HttpStatus.OK);
+    EMAIL_NOT_FOUND(1014,"Email not found, please register account.", HttpStatus.NOT_FOUND),
+    USERNAME_TAKEN(1015, "Username is already taken", HttpStatus.CONFLICT),
+    //    Accounts | Emails | CODE: 2XXX
+    INVALID_EMAIL(2000, "Invalid email", HttpStatus.BAD_REQUEST),
+    EMAIL_WAIT_VERIFY(2001, "This email has been registered and is not verified, please verify and login", HttpStatus.BAD_REQUEST),
+    EMAIL_EXISTED(2002, "This email has been registered, please log in!", HttpStatus.BAD_REQUEST),
+    SUCCESS(2003, "Success",HttpStatus.OK);
 
     private final Integer code;
     @Setter
