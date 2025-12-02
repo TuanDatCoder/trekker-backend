@@ -3,7 +3,7 @@ package com.tuandatcoder.trekkerbackend.entity;
 import com.tuandatcoder.trekkerbackend.enums.AccountProviderEnum;
 import com.tuandatcoder.trekkerbackend.enums.AccountRoleEnum;
 import com.tuandatcoder.trekkerbackend.enums.AccountStatusEnum;
-import com.tuandatcoder.trekkerbackend.enums.GenderEnum;
+import com.tuandatcoder.trekkerbackend.enums.AccountGenderEnum;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -44,7 +44,7 @@ public class Account {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "gender")
-    private GenderEnum gender;
+    private AccountGenderEnum gender;
 
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;

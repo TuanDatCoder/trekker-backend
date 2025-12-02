@@ -24,4 +24,5 @@ public class HomeController {
     public String showRegisterForm() {
         return "register";
     }
+    //Dinh Quoc Tuan Dat
 }

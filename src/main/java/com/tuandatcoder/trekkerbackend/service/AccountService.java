@@ -5,12 +5,13 @@ import com.tuandatcoder.trekkerbackend.dto.ApiResponse;
 import com.tuandatcoder.trekkerbackend.dto.account.response.AccountResponseDTO;
 import com.tuandatcoder.trekkerbackend.dto.auth.request.LoginRequestDTO;
 import com.tuandatcoder.trekkerbackend.dto.auth.request.RegisterRequestDTO;
+import com.tuandatcoder.trekkerbackend.dto.auth.response.LoginResponseDTO;
 import com.tuandatcoder.trekkerbackend.entity.Account;
 import com.tuandatcoder.trekkerbackend.enums.AccountProviderEnum;
 import com.tuandatcoder.trekkerbackend.enums.AccountRoleEnum;
 import com.tuandatcoder.trekkerbackend.enums.AccountStatusEnum;
+import com.tuandatcoder.trekkerbackend.exception.ApiException;
 import com.tuandatcoder.trekkerbackend.exception.ErrorCode;
-import com.tuandatcoder.trekkerbackend.exception.account.AccountException;
 import com.tuandatcoder.trekkerbackend.repository.AccountRepository;
 import com.tuandatcoder.trekkerbackend.security.JwtTokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,10 +46,10 @@ public class AccountService {
 
     public Account registerNewAccount(RegisterRequestDTO registerRequest) {
         if (accountRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
-            throw new AccountException("User existed", ErrorCode.USER_EXISTED);
+            throw new ApiException("User existed", ErrorCode.USER_EXISTED);
         }
         if (accountRepository.findByUsername(registerRequest.getUsername()).isPresent()) {
-            throw new AccountException("Username already taken", ErrorCode.USERNAME_TAKEN);
+            throw new ApiException("Username already taken", ErrorCode.USERNAME_TAKEN);
         }
 
         Account account = Account.builder()
@@ -72,16 +70,16 @@ public class AccountService {
 
     public void verifyAccountByToken(String token) {
         try {
-            String email = jwtTokenUtil.getUsernameFromToken(token);
+            String email = jwtTokenUtil.getEmailFromToken(token);
             verifyAccountByEmail(email);
         } catch (Exception e) {
-            throw new AccountException("Invalid or expired token", ErrorCode.TOKEN_INVALID);
+            throw new ApiException("Invalid or expired token", ErrorCode.TOKEN_INVALID);
         }
     }
 
     public void verifyAccountByEmail(String email) {
         Account account = accountRepository.findByEmail(email)
-                .orElseThrow(() -> new AccountException("Account not found", ErrorCode.ACCOUNT_NOT_FOUND));
+                .orElseThrow(() -> new ApiException("Account not found", ErrorCode.ACCOUNT_NOT_FOUND));
 
         if (account.getStatus() == AccountStatusEnum.VERIFIED) {
             return; // đã verify rồi thì thôi
@@ -91,23 +89,20 @@ public class AccountService {
         accountRepository.save(account);
     }
 
-    // TRẢ VỀ ApiResponse<Map<String, Object>>
-    public ApiResponse<Map<String, Object>> login(LoginRequestDTO loginRequest) {
+    public ApiResponse<LoginResponseDTO> login(LoginRequestDTO loginRequest) {
         String identifier = loginRequest.getIdentifier();
 
         Account account = accountRepository.findByEmail(identifier)
                 .or(() -> accountRepository.findByUsername(identifier))
-                .orElseThrow(() -> new AccountException(
+                .orElseThrow(() -> new ApiException(
                         "User not found with provided email or username",
                         ErrorCode.USER_NOT_FOUND
                 ));
 
-        // Kiểm tra provider
         if (account.getProvider() != AccountProviderEnum.LOCAL) {
             return new ApiResponse<>(400, "Please log in using " + account.getProvider(), null);
         }
 
-        // Kiểm tra đã verify chưa
         if (account.getStatus() != AccountStatusEnum.VERIFIED) {
             return new ApiResponse<>(403, "Please verify your email first", null);
         }
@@ -118,16 +113,17 @@ public class AccountService {
             );
 
             UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(identifier);
-            String token = jwtTokenUtil.generateToken(userDetails);
+            String accessToken = jwtTokenUtil.generateToken(userDetails);
+            String refreshToken = jwtTokenUtil.generateRefreshToken(userDetails);
+            AccountResponseDTO userDto = convertToDto(account);
 
-            Map<String, Object> data = new HashMap<>();
-            data.put("token", token);
-            data.put("userId", account.getId());
-            data.put("username", account.getUsername());
-            data.put("email", account.getEmail());
-            data.put("name", account.getName());
+            LoginResponseDTO responseData = new LoginResponseDTO(
+                    accessToken,
+                    refreshToken,
+                    userDto
+            );
 
-            return new ApiResponse<>(200, "Login successful", data);
+            return new ApiResponse<>(200, "Login successful", responseData);
 
         } catch (BadCredentialsException e) {
             return new ApiResponse<>(401, "Invalid password", null);
@@ -151,16 +147,13 @@ public class AccountService {
     }
 
     private AccountResponseDTO convertToDto(Account account) {
-        // CHỈ expose những field cần thiết cho frontend
         AccountResponseDTO dto = new AccountResponseDTO();
         dto.setId(account.getId());
-        dto.setUsername(account.getUsername()); // ← ĐÚNG! username, không phải name
+        dto.setUsername(account.getUsername());
         dto.setEmail(account.getEmail());
         dto.setName(account.getName());
         dto.setRole(account.getRole());
         dto.setStatus(account.getStatus());
-        // KHÔNG set password, createdAt, updatedAt...
-
         return dto;
     }
 }
