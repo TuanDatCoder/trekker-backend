@@ -25,15 +25,16 @@ public class JwtUserDetailsService implements UserDetailsService {
                 .or(() -> accountRepository.findByUsername(identifier))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + identifier));
 
-
+        // Kiểm tra tài khoản đã verify chưa
         if (account.getStatus() != AccountStatusEnum.VERIFIED) {
             throw new UsernameNotFoundException("Account not verified yet");
         }
 
+        // Tạo authority đúng chuẩn Spring Security: "ROLE_USER", "ROLE_ADMIN"...
         var authority = new SimpleGrantedAuthority("ROLE_" + account.getRole().name());
 
         return new User(
-                account.getEmail(),
+                account.getEmail(),           // username trong Spring Security là email
                 account.getPassword(),
                 Collections.singletonList(authority)
         );

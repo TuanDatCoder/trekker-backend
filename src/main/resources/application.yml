@@ -24,14 +24,42 @@ spring:
 # === SWAGGER SIÊU ĐẸP – CHỈ CẦN GÕ /swagger LÀ RA LUÔN ===
 springdoc:
   swagger-ui:
-    path: /swagger                    # → http://localhost:8080/swagger là ra ngay
+    path: /swagger
+    try-it-out-enabled: true
+    display-request-duration: true
     operations-sorter: alpha
     tags-sorter: alpha
-    try-it-out-enabled: true          # cho phép bấm Try it out luôn trong Swagger
-    display-request-duration: true
-  api-docs:
-    path: /api-docs
-  show-actuator: true                   # nếu bạn dùng actuator sau này
+
+    # Theme Trekker – xanh rừng núi cực chất
+    urls-primary-name: Trekker API v1
+
+    # Custom CSS – vibe outdoor (giữ nguyên)
+    custom-css: |
+      .topbar { 
+        background: linear-gradient(135deg, #1e40af, #16a34a) !important;
+      }
+      .topbar-wrapper img {
+        content: url('https://i.imgur.com/0Z2Y1mT.png') !important;
+      }
+      .swagger-ui .info { margin: 30px 0; }
+      .swagger-ui .scheme-container {
+        background: #f8fafc;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      }
+      .swagger-ui .opblock.opblock-post { 
+        border-color: #16a34a; 
+        background: rgba(22, 163, 74, 0.05);
+      }
+      .swagger-ui .opblock.opblock-get { 
+        border-color: #1e40af; 
+        background: rgba(30, 64, 175, 0.05);
+      }
+      .swagger-ui .btn.authorize {
+        background: #16a34a !important;
+        border-color: #16a34a !important;
+      }
+      .swagger-ui .btn.authorize svg { fill: white !important; }
+      
 
 # Cho phép Swagger + Actuator không bị chặn bởi Security (tùy chọn, rất tiện)
 management:
