@@ -1,6 +1,7 @@
 package com.tuandatcoder.trekkerbackend.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,54 +16,96 @@ import java.util.function.Function;
 public class JwtTokenUtil implements Serializable {
 
     private static final long serialVersionUID = -2550185165626007488L;
-    public static final long JWT_TOKEN_VALIDITY = 5 * 60 * 60;
+
+    // ĐÃ SỬA: Access token chỉ 30 phút (chuẩn production)
+    public static final long JWT_TOKEN_VALIDITY = 30 * 60; // 30 minutes
+    public static final long REFRESH_TOKEN_VALIDITY = 7 * 24 * 60 * 60; // 7 days
 
     @Value("${jwt.secret}")
     private String secret;
 
-    // Lấy username từ JWT token
-    public String getUsernameFromToken(String token) {
+    public String getEmailFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
     }
 
-    // Lấy ngày hết hạn của JWT token
+    public String getRoleFromToken(String token) {
+        return getClaimFromToken(token, claims -> claims.get("role", String.class));
+    }
+
     public Date getExpirationDateFromToken(String token) {
         return getClaimFromToken(token, Claims::getExpiration);
     }
 
-    // Lấy một giá trị cụ thể từ JWT token
-    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = getAllClaimsFromToken(token);
-        return claimsResolver.apply(claims);
+    private <T> T getClaimFromToken(String token, Function<Claims, T> claimResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimResolver.apply(claims);
     }
 
-    // Lấy tất cả các thông tin từ JWT token bằng cách sử dụng secret key
-    private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
+    private Claims extractAllClaims(String token) {
+        return Jwts.parser()
+                .setSigningKey(secret)
+                .parseClaimsJws(token)
+                .getBody();
     }
 
-    // Kiểm tra nếu JWT token đã hết hạn
+    public String extractEmail(String token) {
+        return getEmailFromToken(token);
+    }
+
     private Boolean isTokenExpired(String token) {
-        final Date expiration = getExpirationDateFromToken(token);
-        return expiration.before(new Date());
+        try {
+            final Date expiration = getExpirationDateFromToken(token);
+            return expiration.before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        } catch (Exception e) {
+            return true;
+        }
     }
 
-    // Tạo JWT token từ thông tin người dùng
     public String generateToken(UserDetails userDetails) {
-        return doGenerateToken(userDetails.getUsername());
+        String role = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                .orElse("USER");
+        return doGenerateToken(userDetails.getUsername(), role, JWT_TOKEN_VALIDITY);
     }
 
-    // Thực hiện tạo JWT token với subject là username
-    private String doGenerateToken(String subject) {
-        Claims claims = Jwts.claims().setSubject(subject);
-        return Jwts.builder().setClaims(claims).setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000))
-                .signWith(SignatureAlgorithm.HS512, secret).compact();
+    public String generateRefreshToken(UserDetails userDetails) {
+        String role = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                .orElse("USER");
+        return doGenerateToken(userDetails.getUsername(), role, REFRESH_TOKEN_VALIDITY);
     }
 
-    // Xác thực JWT token
+    private String doGenerateToken(String subject, String role, long validityInSeconds) {
+        return Jwts.builder()
+                .setSubject(subject)
+                .claim("role", role) // role trong token là "USER", "ADMIN"...
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + validityInSeconds * 1000L))
+                .signWith(SignatureAlgorithm.HS512, secret)
+                .compact();
+    }
+
+
     public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = getUsernameFromToken(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        try {
+            final String email = getEmailFromToken(token);
+            final String roleFromToken = getRoleFromToken(token);
+
+            String expectedRole = userDetails.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                    .orElse("USER");
+
+            return email.equals(userDetails.getUsername())
+                    && roleFromToken.equals(expectedRole)
+                    && !isTokenExpired(token);
+
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

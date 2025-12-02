@@ -3,6 +3,7 @@ package com.tuandatcoder.trekkerbackend.controller;
 import com.tuandatcoder.trekkerbackend.dto.ApiResponse;
 import com.tuandatcoder.trekkerbackend.dto.auth.request.LoginRequestDTO;
 import com.tuandatcoder.trekkerbackend.dto.auth.request.RegisterRequestDTO;
+import com.tuandatcoder.trekkerbackend.dto.auth.response.LoginResponseDTO;
 import com.tuandatcoder.trekkerbackend.entity.Account;
 import com.tuandatcoder.trekkerbackend.enums.AccountStatusEnum;
 import com.tuandatcoder.trekkerbackend.security.JwtTokenUtil;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -46,6 +48,7 @@ public class AuthController {
                 201,
                 "Registration successful. Please check your email to verify your account.",
                 null
+
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -60,8 +63,8 @@ public class AuthController {
 
     // LOGIN
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> login(@RequestBody LoginRequestDTO loginRequest) {
-        ApiResponse<Map<String, Object>> response = accountService.login(loginRequest);
+    public ResponseEntity<ApiResponse<LoginResponseDTO>> login(@RequestBody LoginRequestDTO loginRequest) {
+        ApiResponse<LoginResponseDTO> response = accountService.login(loginRequest);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
