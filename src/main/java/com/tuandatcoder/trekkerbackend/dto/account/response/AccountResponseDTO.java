@@ -1,14 +1,11 @@
 package com.tuandatcoder.trekkerbackend.dto.account.response;
 
-
-import com.tuandatcoder.trekkerbackend.enums.AccountProviderEnum;
 import com.tuandatcoder.trekkerbackend.enums.AccountRoleEnum;
 import com.tuandatcoder.trekkerbackend.enums.AccountStatusEnum;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
