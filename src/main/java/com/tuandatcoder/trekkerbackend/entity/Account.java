@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "account") // Map vào bảng 'account' mới tạo
+@Table(name = "account")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
