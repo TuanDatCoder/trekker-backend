@@ -10,5 +10,7 @@ public enum ActivityActionTypeEnum {
     LIKE,
     COMMENT,
     DELETE_ALBUM,
-    CREATE_ALBUM
+    CREATE_ALBUM,
+    ADD_PHOTO_TO_ALBUM,
+    REMOVE_PHOTO_FROM_ALBUM
 }
