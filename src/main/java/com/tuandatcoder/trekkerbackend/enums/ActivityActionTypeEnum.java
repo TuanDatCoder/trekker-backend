@@ -12,5 +12,7 @@ public enum ActivityActionTypeEnum {
     DELETE_ALBUM,
     CREATE_ALBUM,
     ADD_PHOTO_TO_ALBUM,
-    REMOVE_PHOTO_FROM_ALBUM
+    REMOVE_PHOTO_FROM_ALBUM,
+    DELETE_COMMENT,
+
 }
