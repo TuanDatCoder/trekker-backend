@@ -1,5 +1,6 @@
 package com.tuandatcoder.trekkerbackend.entity;
 
+import com.tuandatcoder.trekkerbackend.enums.ActivityActionTypeEnum;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -22,8 +23,9 @@ public class ActivityLog {
     @JoinColumn(name = "account_id")
     private Account account;
 
-    @Column(length = 100)
-    private String actionType; // LOGIN, UPLOAD_PHOTO, etc.
+    @Enumerated(EnumType.STRING)
+    @Column(length = 100, nullable = false)
+    private ActivityActionTypeEnum actionType;
 
     @Column(columnDefinition = "TEXT")
     private String details;
