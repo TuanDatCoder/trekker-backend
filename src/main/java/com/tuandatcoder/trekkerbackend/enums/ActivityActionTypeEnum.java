@@ -8,5 +8,7 @@ public enum ActivityActionTypeEnum {
     CREATE_TRIP,
     DELETE_TRIP,
     LIKE,
-    COMMENT
+    COMMENT,
+    DELETE_ALBUM,
+    CREATE_ALBUM
 }

@@ -51,6 +51,15 @@ public enum ErrorCode {
     TRIP_NOT_COLLABORATIVE(5003, "This trip is not collaborative", HttpStatus.BAD_REQUEST),
     MAX_PARTICIPANTS_REACHED(5004, "This trip has reached maximum participants", HttpStatus.BAD_REQUEST),
 
+    //    ALBUMS | CODE: 6XXX
+    ALBUM_NOT_FOUND(6001, "Album not found or has been deleted", HttpStatus.NOT_FOUND),
+    ALBUM_FORBIDDEN(6002, "You don't have permission to perform this action on this album", HttpStatus.FORBIDDEN),
+    ALBUM_TITLE_REQUIRED(6003, "Album title is required", HttpStatus.BAD_REQUEST),
+    ALBUM_PRIVACY_INVALID(6004, "Invalid album privacy setting", HttpStatus.BAD_REQUEST),
+    ALBUM_TITLE_TOO_LONG(6005, "Album title must not exceed 255 characters", HttpStatus.BAD_REQUEST),
+    ALBUM_CANNOT_ATTACH_TO_TRIP(6006, "You can only create album for your own trip", HttpStatus.FORBIDDEN),
+    ALBUM_COVER_PHOTO_INVALID(6007, "Cover photo does not belong to this album or trip", HttpStatus.BAD_REQUEST),
+
     //    GENERAL | AUTHORIZATION
     UNAUTHENTICATED(9001, "You must be logged in to perform this action", HttpStatus.UNAUTHORIZED),
     FORBIDDEN(9003, "You don't have permission to access this resource", HttpStatus.FORBIDDEN),
