@@ -16,4 +16,6 @@ public enum ActivityActionTypeEnum {
     DELETE_COMMENT,
     CREATE_FEATURE,
     DELETE_FEATURE,
+    FOLLOW_USER,
+    UNFOLLOW_USER,
 }
