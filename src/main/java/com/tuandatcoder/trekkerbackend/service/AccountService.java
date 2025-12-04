@@ -12,6 +12,7 @@ import com.tuandatcoder.trekkerbackend.enums.AccountRoleEnum;
 import com.tuandatcoder.trekkerbackend.enums.AccountStatusEnum;
 import com.tuandatcoder.trekkerbackend.exception.ApiException;
 import com.tuandatcoder.trekkerbackend.exception.ErrorCode;
+import com.tuandatcoder.trekkerbackend.mapper.AccountMapper;
 import com.tuandatcoder.trekkerbackend.repository.AccountRepository;
 import com.tuandatcoder.trekkerbackend.security.JwtTokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,9 @@ public class AccountService {
 
     @Autowired
     private JwtUserDetailsService jwtUserDetailsService;
+
+    @Autowired
+    private AccountMapper accountMapper;
 
     public Account registerNewAccount(RegisterRequestDTO registerRequest) {
         if (accountRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
@@ -90,14 +94,15 @@ public class AccountService {
     }
 
     public ApiResponse<LoginResponseDTO> login(LoginRequestDTO loginRequest) {
+
         String identifier = loginRequest.getIdentifier();
 
         Account account = accountRepository.findByEmail(identifier)
                 .or(() -> accountRepository.findByUsername(identifier))
-                .orElseThrow(() -> new ApiException(
-                        "User not found with provided email or username",
-                        ErrorCode.USER_NOT_FOUND
-                ));
+                .orElseThrow(() ->
+                        new ApiException("User not found with provided email or username",
+                                ErrorCode.USER_NOT_FOUND)
+                );
 
         if (account.getProvider() != AccountProviderEnum.LOCAL) {
             return new ApiResponse<>(400, "Please log in using " + account.getProvider(), null);
@@ -108,19 +113,23 @@ public class AccountService {
         }
 
         try {
+            // Validate password
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(identifier, loginRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(
+                            identifier,
+                            loginRequest.getPassword()
+                    )
             );
 
             UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(identifier);
+
             String accessToken = jwtTokenUtil.generateToken(userDetails);
             String refreshToken = jwtTokenUtil.generateRefreshToken(userDetails);
-            AccountResponseDTO userDto = convertToDto(account);
 
             LoginResponseDTO responseData = new LoginResponseDTO(
                     accessToken,
                     refreshToken,
-                    userDto
+                    accountMapper.toDto(account)
             );
 
             return new ApiResponse<>(200, "Login successful", responseData);
@@ -137,23 +146,12 @@ public class AccountService {
         try {
             List<Account> accounts = accountRepository.findAll();
             List<AccountResponseDTO> dtos = accounts.stream()
-                    .map(this::convertToDto)  // ← QUAN TRỌNG: Chỉ expose field cần thiết
+                    .map(accountMapper::toDto)
                     .collect(Collectors.toList());
 
-            return new ApiResponse<>(200, "Lấy danh sách tài khoản thành công", dtos);
+            return new ApiResponse<>(200, "Get list of successful accounts", dtos);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Lỗi khi lấy tài khoản: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error retrieving account: " + e.getMessage(), null);
         }
-    }
-
-    private AccountResponseDTO convertToDto(Account account) {
-        AccountResponseDTO dto = new AccountResponseDTO();
-        dto.setId(account.getId());
-        dto.setUsername(account.getUsername());
-        dto.setEmail(account.getEmail());
-        dto.setName(account.getName());
-        dto.setRole(account.getRole());
-        dto.setStatus(account.getStatus());
-        return dto;
     }
 }
