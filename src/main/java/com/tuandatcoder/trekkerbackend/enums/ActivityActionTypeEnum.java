@@ -41,5 +41,8 @@ public enum ActivityActionTypeEnum {
     DELETE_PLACE,
     CREATE_REPORT,
     UPDATE_REPORT_STATUS,
+    REMOVE_TAG,
+    TAG_USER,
+
 
 }
