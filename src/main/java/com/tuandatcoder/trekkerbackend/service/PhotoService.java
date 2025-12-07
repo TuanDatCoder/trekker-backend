@@ -1,10 +1,9 @@
 package com.tuandatcoder.trekkerbackend.service;
 
 import com.drew.imaging.ImageMetadataReader;
-import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
+import com.drew.metadata.exif.ExifIFD0Directory;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
-import com.drew.metadata.exif.GpsDirectory;
 import com.tuandatcoder.trekkerbackend.dto.ApiResponse;
 import com.tuandatcoder.trekkerbackend.dto.photo.request.UploadPhotoRequestDTO;
 import com.tuandatcoder.trekkerbackend.dto.photo.response.PhotoResponseDTO;
@@ -46,48 +45,49 @@ public class PhotoService {
     @Autowired private PhotoMapper photoMapper;
     @Autowired private AccountUtils accountUtils;
     @Autowired private ActivityLogger activityLogger;
-    @Autowired private  PlaceRepository placeRepository;
+    @Autowired private PlaceRepository placeRepository;
     @Autowired private LocationRepository locationRepository;
 
     @Value("${app.upload.dir:./uploads}")
     private String uploadDir;
 
+    // =============================================================
+    // UPLOAD
+    // =============================================================
     @Transactional
     public ApiResponse<PhotoResponseDTO> uploadPhoto(UploadPhotoRequestDTO dto) {
+
         Account current = accountUtils.getCurrentAccount();
-        if (current == null) throw new ApiException("Login required", ErrorCode.UNAUTHENTICATED);
+        if (current == null)
+            throw new ApiException("Login required", ErrorCode.UNAUTHENTICATED);
 
         MultipartFile file = dto.getFile();
-        if (file == null || file.isEmpty()) {
+        if (file == null || file.isEmpty())
             throw new ApiException("File is required", ErrorCode.PHOTO_UPLOAD_FAILED);
-        }
 
-        // Kiểm tra trip
+        // Trip validation
         Trip trip = null;
         if (dto.getTripId() != null) {
             trip = tripRepository.findActiveById(dto.getTripId())
                     .orElseThrow(() -> new ApiException("Trip not found", ErrorCode.TRIP_NOT_FOUND));
-            if (!trip.getAccount().getId().equals(current.getId())) {
+
+            if (!trip.getAccount().getId().equals(current.getId()))
                 throw new ApiException("You can only upload to your own trip", ErrorCode.TRIP_FORBIDDEN);
-            }
         }
 
-        // Xử lý các liên kết khác
-        Location location = null;
-        if (dto.getLocationId() != null) {
-            location = locationRepository.findActiveById(dto.getLocationId()).orElse(null);
-        }
+        // Optional linking
+        Location location = dto.getLocationId() != null
+                ? locationRepository.findActiveById(dto.getLocationId()).orElse(null)
+                : null;
 
-        Place place = null;
-        if (dto.getPlaceId() != null) {
-            place = placeRepository.findActiveById(dto.getPlaceId()).orElse(null);
-        }
+        Place place = dto.getPlaceId() != null
+                ? placeRepository.findActiveById(dto.getPlaceId()).orElse(null)
+                : null;
 
-        // Upload file + thumbnail
-        String originalUrl = saveFile(file, "original");
+        // FILE HANDLING
+        String url = saveFile(file, "original");
         String thumbnailUrl = generateThumbnail(file);
 
-        // Đọc metadata ảnh
         BufferedImage img = null;
         try {
             img = ImageIO.read(file.getInputStream());
@@ -103,22 +103,22 @@ public class PhotoService {
                 .trip(trip)
                 .location(location)
                 .place(place)
-                .url(originalUrl)
+                .url(url)
                 .thumbnailUrl(thumbnailUrl)
                 .caption(dto.getCaption())
                 .mediaType(determineMediaType(file))
                 .fileSizeMb(file.getSize() / (1024.0 * 1024.0))
                 .width(width)
                 .height(height)
-                .isRealtime(dto.getIsRealtime() != null && dto.getIsRealtime())
-                .isPublicOnPlace(dto.getIsPublicOnPlace() != null && dto.getIsPublicOnPlace())
+                .isRealtime(Boolean.TRUE.equals(dto.getIsRealtime()))
+                .isPublicOnPlace(Boolean.TRUE.equals(dto.getIsPublicOnPlace()))
                 .takenAt(takenAt)
                 .totalReactions(0)
                 .build();
 
         photo = photoRepository.save(photo);
 
-        // Cập nhật totalPhotos của Trip
+        // Update Trip photo count
         if (trip != null) {
             trip.setTotalPhotos(trip.getTotalPhotos() + 1);
             tripRepository.save(trip);
@@ -126,37 +126,49 @@ public class PhotoService {
 
         activityLogger.log(
                 com.tuandatcoder.trekkerbackend.enums.ActivityActionTypeEnum.UPLOAD_PHOTO,
-                "Uploaded " + (photo.getMediaType() == PhotoMediaTypeEnum.VIDEO ? "video" : "photo"),
+                "Uploaded " + photo.getMediaType(),
                 current
         );
 
         return new ApiResponse<>(201, "Photo uploaded successfully", photoMapper.toDto(photo));
     }
 
-    // Cải thiện extractTakenAt
+    // =============================================================
+    // EXIF HANDLER
+    // =============================================================
     private LocalDateTime extractTakenAt(MultipartFile file) {
         try {
             Metadata metadata = ImageMetadataReader.readMetadata(file.getInputStream());
-            // Ưu tiên tag chính xác nhất
-            Directory dir = metadata.getFirstDirectoryOfType(com.drew.metadata.exif.ExifSubIFDDirectory.class);
-            if (dir != null && dir.containsTag(com.drew.metadata.exif.ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL)) {
-                Date date = dir.getDate(com.drew.metadata.exif.ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-                if (date != null) return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+            // Priority: DateTimeOriginal
+            ExifSubIFDDirectory sub = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+            if (sub != null && sub.containsTag(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL)) {
+                Date date = sub.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+                if (date != null)
+                    return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
             }
-            // Fallback
-            dir = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-            if (dir != null && dir.containsTag(ExifSubIFDDirectory.TAG_DATETIME)) {
-                Date date = dir.getDate(ExifSubIFDDirectory.TAG_DATETIME);
-                if (date != null) return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+            // Fallback: normal DateTime
+            ExifIFD0Directory ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+            if (ifd0 != null && ifd0.containsTag(ExifIFD0Directory.TAG_DATETIME)) {
+                Date date = ifd0.getDate(ExifIFD0Directory.TAG_DATETIME);
+                if (date != null)
+                    return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
             }
+
         } catch (Exception ignored) {}
+
         return null;
     }
 
+    // =============================================================
+    // GETTERS
+    // =============================================================
     public ApiResponse<List<PhotoResponseDTO>> getMyPhotos() {
         Account current = accountUtils.getCurrentAccount();
         List<Photo> photos = photoRepository.findByAccountId(current.getId());
-        return new ApiResponse<>(200, "Your photos", photos.stream().map(photoMapper::toDto).collect(Collectors.toList()));
+        return new ApiResponse<>(200, "Your photos",
+                photos.stream().map(photoMapper::toDto).collect(Collectors.toList()));
     }
 
     public ApiResponse<List<PhotoResponseDTO>> getTripPhotos(Long tripId) {
@@ -164,30 +176,32 @@ public class PhotoService {
                 .orElseThrow(() -> new ApiException("Trip not found", ErrorCode.TRIP_NOT_FOUND));
 
         Account current = accountUtils.getCurrentAccount();
-        if (trip.getPrivacy() == com.tuandatcoder.trekkerbackend.enums.TripPrivacyEnum.PRIVATE) {
-            if (current == null || !trip.getAccount().getId().equals(current.getId())) {
-                throw new ApiException("Forbidden", ErrorCode.TRIP_FORBIDDEN);
-            }
+        if (trip.getPrivacy() == com.tuandatcoder.trekkerbackend.enums.TripPrivacyEnum.PRIVATE &&
+                (current == null || !trip.getAccount().getId().equals(current.getId()))) {
+            throw new ApiException("Forbidden", ErrorCode.TRIP_FORBIDDEN);
         }
 
         List<Photo> photos = photoRepository.findByTripId(tripId);
-        return new ApiResponse<>(200, "Trip photos", photos.stream().map(photoMapper::toDto).collect(Collectors.toList()));
+        return new ApiResponse<>(200, "Trip photos",
+                photos.stream().map(photoMapper::toDto).collect(Collectors.toList()));
     }
 
+    // =============================================================
+    // DELETE
+    // =============================================================
     @Transactional
     public ApiResponse<String> deletePhoto(Long id) {
         Photo photo = photoRepository.findActiveById(id)
                 .orElseThrow(() -> new ApiException("Photo not found", ErrorCode.PHOTO_NOT_FOUND));
 
         Account current = accountUtils.getCurrentAccount();
-        if (!photo.getAccount().getId().equals(current.getId())) {
+        if (!photo.getAccount().getId().equals(current.getId()))
             throw new ApiException("You can only delete your own photo", ErrorCode.PHOTO_FORBIDDEN);
-        }
 
         photo.setDeletedAt(LocalDateTime.now());
         photoRepository.save(photo);
 
-        // Giảm totalPhotos của Trip
+        // Update trip counter
         if (photo.getTrip() != null) {
             Trip trip = photo.getTrip();
             trip.setTotalPhotos(Math.max(0, trip.getTotalPhotos() - 1));
@@ -197,7 +211,9 @@ public class PhotoService {
         return new ApiResponse<>(200, "Photo deleted successfully", null);
     }
 
-    // Helper methods
+    // =============================================================
+    // FILE HANDLING
+    // =============================================================
     private String saveFile(MultipartFile file, String prefix) {
         try {
             String fileName = prefix + "_" + UUID.randomUUID() + "_" + file.getOriginalFilename();
@@ -216,45 +232,27 @@ public class PhotoService {
             if (original == null) return null;
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
             Thumbnails.of(original)
                     .size(400, 400)
                     .keepAspectRatio(true)
                     .toOutputStream(baos);
 
-            String thumbName = "thumb_" + UUID.randomUUID() + ".jpg";
-            Path thumbPath = Paths.get(uploadDir, thumbName);
-            Files.write(thumbPath, baos.toByteArray());
+            String name = "thumb_" + UUID.randomUUID() + ".jpg";
+            Path path = Paths.get(uploadDir, name);
 
-            return "/uploads/" + thumbName;
-        } catch (Exception e) {
+            Files.write(path, baos.toByteArray());
+            return "/uploads/" + name;
+
+        } catch (Exception ignored) {
             return null;
         }
     }
 
-    private com.tuandatcoder.trekkerbackend.enums.PhotoMediaTypeEnum determineMediaType(MultipartFile file) {
+    private PhotoMediaTypeEnum determineMediaType(MultipartFile file) {
         String type = file.getContentType();
-        return (type != null && type.startsWith("video")) ?
-                com.tuandatcoder.trekkerbackend.enums.PhotoMediaTypeEnum.VIDEO :
-                com.tuandatcoder.trekkerbackend.enums.PhotoMediaTypeEnum.IMAGE;
-    }
-
-    private Integer getImageWidth(MultipartFile file) { /* đọc từ BufferedImage */ return null; }
-    private Integer getImageHeight(MultipartFile file) { /* đọc từ BufferedImage */ return null; }
-
-    private LocalDateTime extractTakenAt(MultipartFile file) {
-        try {
-            Metadata metadata = ImageMetadataReader.readMetadata(file.getInputStream());
-            Directory dir = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-            if (dir != null && dir.containsTag(ExifSubIFDDirectory.TAG_DATETIME)) {
-                Date date = dir.getDate(ExifSubIFDDirectory.TAG_DATETIME);
-                return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-            }
-        } catch (Exception ignored) {}
-        return null;
-    }
-
-    private String extractExifData(MultipartFile file) {
-        // trả về JSON string (có thể dùng ObjectMapper)
-        return "{}";
+        return (type != null && type.startsWith("video"))
+                ? PhotoMediaTypeEnum.VIDEO
+                : PhotoMediaTypeEnum.IMAGE;
     }
 }
