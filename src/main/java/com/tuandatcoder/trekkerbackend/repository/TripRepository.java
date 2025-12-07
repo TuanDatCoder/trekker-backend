@@ -22,4 +22,6 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
     // Public trips + Friends-only (sẽ mở rộng sau khi có friend system)
     @Query("SELECT t FROM Trip t WHERE t.privacy = 'PUBLIC' AND t.deletedAt IS NULL")
     List<Trip> findAllPublic();
+
+
 }

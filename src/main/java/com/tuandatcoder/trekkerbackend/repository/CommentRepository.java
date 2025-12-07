@@ -24,4 +24,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     // Tìm comment active
     @Query("SELECT c FROM Comment c WHERE c.id = :id AND c.deletedAt IS NULL")
     Optional<Comment> findActiveById(@Param("id") Long id);
+
+
 }

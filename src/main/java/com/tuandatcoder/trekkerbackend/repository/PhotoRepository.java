@@ -19,4 +19,7 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
 
     @Query("SELECT p FROM Photo p WHERE p.id = :id AND p.deletedAt IS NULL")
     Optional<Photo> findActiveById(Long id);
+
+
+    
 }

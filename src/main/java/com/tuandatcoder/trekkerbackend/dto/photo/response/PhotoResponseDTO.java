@@ -29,4 +29,9 @@ public class PhotoResponseDTO {
     private boolean isRealtime;
     private LocalDateTime takenAt;
     private LocalDateTime createdAt;
+    private Integer totalReactions;
+    private Long placeId;
+    private String placeName;
+    private Long locationId;
+    private String locationName;
 }

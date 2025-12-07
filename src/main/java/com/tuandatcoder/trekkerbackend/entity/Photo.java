@@ -88,4 +88,8 @@ public class Photo {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt; // Soft delete
+
+    @Column(name = "total_reactions", nullable = false)
+    @Builder.Default
+    private Integer totalReactions = 0;
 }

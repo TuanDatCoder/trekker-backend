@@ -30,6 +30,10 @@ public enum ActivityActionTypeEnum {
     ADD_FEATURE_TO_PLAN,
     DELETE_POST,
     CREATE_POST,
-
+    REACT,
+    REMOVE_REACTION,
+    CHANGE_REACTION,
+    DELETE_LOCATION,
+    CREATE_LOCATION
 
 }
