@@ -11,7 +11,7 @@ public interface PlaceMapper {
     @Mapping(target = "categoryId", source = "category.id")
     @Mapping(target = "categoryName", source = "category.name")
     @Mapping(target = "locationId", source = "location.id")
-    @Mapping(target = "locationName", source = "location.name")
+    @Mapping(target = "locationName", source = "location.city")
     @Mapping(target = "createdById", source = "createdBy.id")
     @Mapping(target = "createdByUsername", source = "createdBy.username")
     PlaceResponseDTO toDto(Place entity);
