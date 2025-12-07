@@ -143,7 +143,7 @@ public class PlaceService {
         }
 
         if (dto.getIsActive() != null) {
-            place.setIsActive(dto.getIsActive());
+            place.setActive(dto.getIsActive());
             place.setStatus(dto.getIsActive() ? PlaceStatusEnum.ACTIVE : PlaceStatusEnum.INACTIVE);
         }
 

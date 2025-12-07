@@ -113,7 +113,7 @@ public class PlaceCategoryService {
         }
 
         if (dto.getIsActive() != null) {
-            category.setIsActive(dto.getIsActive());
+            category.setActive(dto.getIsActive());
         }
 
         category = categoryRepository.save(category);
