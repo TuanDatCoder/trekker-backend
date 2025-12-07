@@ -26,6 +26,8 @@ public enum ActivityActionTypeEnum {
     DELETE_PLACE_CATEGORY,
     DELETE_REVIEW,
     REVIEW_PLACE,
+    REMOVE_FEATURE_FROM_PLAN,
+    ADD_FEATURE_TO_PLAN,
 
 
 
