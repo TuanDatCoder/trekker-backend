@@ -24,6 +24,9 @@ public enum ActivityActionTypeEnum {
     UNFRIEND,
     CREATE_PLACE_CATEGORY,
     DELETE_PLACE_CATEGORY,
+    DELETE_REVIEW,
+    REVIEW_PLACE,
+
 
 
 }
