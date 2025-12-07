@@ -28,7 +28,8 @@ public enum ActivityActionTypeEnum {
     REVIEW_PLACE,
     REMOVE_FEATURE_FROM_PLAN,
     ADD_FEATURE_TO_PLAN,
-
+    DELETE_POST,
+    CREATE_POST,
 
 
 }
